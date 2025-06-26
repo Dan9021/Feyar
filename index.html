@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secure Access</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: linear-gradient(135deg, #6366f1 0%, #a5b4fc 100%);
+      min-height: 100vh;
+    }
+    .glass {
+      background: rgba(255,255,255,0.85);
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+      backdrop-filter: blur(8px);
+      border-radius: 1.5rem;
+      border: 1px solid rgba(255,255,255,0.18);
+      transition: box-shadow 0.3s;
+    }
+    .glass:focus-within {
+      box-shadow: 0 12px 40px 0 rgba(99,102,241,0.25);
+    }
+    .fade-in {
+      animation: fadeIn 0.7s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(30px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+    /* Loader styles */
+    #loader-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(99,102,241,0.10);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      transition: opacity 0.3s;
+    }
+    .lds-ring {
+      display: inline-block;
+      position: relative;
+      width: 64px;
+      height: 64px;
+    }
+    .lds-ring div {
+      box-sizing: border-box;
+      display: block;
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      margin: 8px;
+      border: 6px solid #6366f1;
+      border-radius: 50%;
+      animation: lds-ring 1.2s cubic-bezier(0.5,0,0.5,1) infinite;
+      border-color: #6366f1 transparent transparent transparent;
+    }
+    .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
+    .lds-ring div:nth-child(2) { animation-delay: -0.3s; }
+    .lds-ring div:nth-child(3) { animation-delay: -0.15s; }
+    @keyframes lds-ring {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+  <!-- Loader screen -->
+  <div id="loader-bg">
+    <div>
+      <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+      <div class="mt-4 text-indigo-700 font-semibold text-center">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Hidden at start -->
+  <div id="auth-card" class="glass w-full max-w-sm p-8 fade-in" style="display:none"></div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script>
+    // Firebase configuration (put your own)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCmQhp9-DUCbeQtx6R9RBEWA2KcFFs1hKo",
+      authDomain: "inicio-sesion-33406.firebaseapp.com",
+      projectId: "inicio-sesion-33406",
+      storageBucket: "inicio-sesion-33406.firebasestorage.app",
+      messagingSenderId: "998917786779",
+      appId: "1:998917786779:web:92e0f347364e54d6970a3e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // --- UI Templates ---
+    function loginTemplate() {
+      return `
+        <h2 class="text-2xl font-bold text-center text-indigo-700 mb-6">Welcome</h2>
+        <div id="error" class="hidden text-red-600 text-sm mb-3 text-center"></div>
+        <input id="email" type="email" placeholder="Email" class="mb-3 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none transition">
+        <input id="password" type="password" placeholder="Password" class="mb-2 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none transition">
+        <button id="loginBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg transition mb-2">Sign In</button>
+        <button id="googleBtn" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 rounded-lg transition mb-2">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-5 h-5">Sign in with Google
+        </button>
+        <p class="text-center text-xs text-gray-500 mt-2">
+          <span id="forgotPass" class="text-indigo-600 font-semibold cursor-pointer hover:underline">Forgot your password?</span>
+        </p>
+        <p class="text-center text-sm text-gray-600 mt-2">Don't have an account?
+          <span id="toRegister" class="text-indigo-600 font-semibold cursor-pointer hover:underline">Register</span>
+        </p>
+      `;
+    }
+
+    function registerTemplate() {
+      return `
+        <h2 class="text-2xl font-bold text-center text-indigo-700 mb-6">Create Account</h2>
+        <div id="error" class="hidden text-red-600 text-sm mb-3 text-center"></div>
+        <input id="email" type="email" placeholder="Email" class="mb-3 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none transition">
+        <input id="password" type="password" placeholder="Password (min. 6 characters)" class="mb-4 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none transition">
+        <button id="registerBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg transition mb-2">Register</button>
+        <button id="googleBtn" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 rounded-lg transition mb-4">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-5 h-5">Register with Google
+        </button>
+        <p class="text-center text-sm text-gray-600">Already have an account?
+          <span id="toLogin" class="text-indigo-600 font-semibold cursor-pointer hover:underline">Sign In</span>
+        </p>
+      `;
+    }
+
+    function forgotPassTemplate() {
+      return `
+        <h2 class="text-xl font-bold text-center text-indigo-700 mb-4">Reset Password</h2>
+        <div id="error" class="hidden text-red-600 text-sm mb-3 text-center"></div>
+        <input id="resetEmail" type="email" placeholder="Email" class="mb-4 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none transition">
+        <button id="sendResetBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg transition mb-2">Send Link</button>
+        <p class="text-center text-sm text-gray-600">
+          <span id="backToLogin" class="text-indigo-600 font-semibold cursor-pointer hover:underline">Back to sign in</span>
+        </p>
+      `;
+    }
+
+    // --- Render Functions ---
+    const card = document.getElementById('auth-card');
+    const loader = document.getElementById('loader-bg');
+
+    function showError(msg, color = "red") {
+      const err = document.getElementById('error');
+      if (err) {
+        err.textContent = msg;
+        err.classList.remove('hidden');
+        err.classList.remove('text-red-600', 'text-green-600');
+        err.classList.add(color === "green" ? 'text-green-600' : 'text-red-600');
+      }
+    }
+    function clearError() {
+      const err = document.getElementById('error');
+      if (err) err.classList.add('hidden');
+    }
+
+    function renderLogin() {
+      card.innerHTML = loginTemplate();
+      document.getElementById('loginBtn').onclick = handleLogin;
+      document.getElementById('googleBtn').onclick = handleGoogle;
+      document.getElementById('toRegister').onclick = renderRegister;
+      document.getElementById('forgotPass').onclick = renderForgotPass;
+      clearError();
+    }
+
+    function renderRegister() {
+      card.innerHTML = registerTemplate();
+      document.getElementById('registerBtn').onclick = handleRegister;
+      document.getElementById('googleBtn').onclick = handleGoogle;
+      document.getElementById('toLogin').onclick = renderLogin;
+      clearError();
+    }
+
+    function renderForgotPass() {
+      card.innerHTML = forgotPassTemplate();
+      document.getElementById('sendResetBtn').onclick = handleForgotPass;
+      document.getElementById('backToLogin').onclick = renderLogin;
+      clearError();
+    }
+
+    // --- Auth Handlers ---
+    function handleLogin() {
+      clearError();
+      loader.style.display = "flex";
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if (!email || !password) {
+        showError("Please fill in all fields.");
+        loader.style.display = "none";
+        return;
+      }
+      auth.signInWithEmailAndPassword(email, password)
+        .catch(e => {
+          showError(e.message);
+          loader.style.display = "none";
+        });
+    }
+
+    function handleRegister() {
+      clearError();
+      loader.style.display = "flex";
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if (!email || !password) {
+        showError("Please fill in all fields.");
+        loader.style.display = "none";
+        return;
+      }
+      if (password.length < 6) {
+        showError("Password must be at least 6 characters.");
+        loader.style.display = "none";
+        return;
+      }
+      auth.createUserWithEmailAndPassword(email, password)
+        .catch(e => {
+          showError(e.message);
+          loader.style.display = "none";
+        });
+    }
+
+    function handleGoogle() {
+      clearError();
+      loader.style.display = "flex";
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+        .catch(e => {
+          showError(e.message);
+          loader.style.display = "none";
+        });
+    }
+
+    function handleForgotPass() {
+      clearError();
+      const email = document.getElementById('resetEmail').value.trim();
+      if (!email) {
+        showError("Please enter your email.");
+        return;
+      }
+      auth.sendPasswordResetEmail(email)
+        .then(() => {
+          showError("Link sent! Check your email.", "green");
+        })
+        .catch(e => showError(e.message));
+    }
+
+    // --- Loader control ---
+    let loaderMinTime = 5000; // 5 seconds
+    let loaderStart = Date.now();
+
+    function hideLoaderAndRender(renderFn, ...args) {
+      const elapsed = Date.now() - loaderStart;
+      const wait = Math.max(0, loaderMinTime - elapsed);
+      setTimeout(() => {
+        loader.style.display = "none";
+        card.style.display = "block";
+        renderFn(...args);
+      }, wait);
+    }
+
+    // --- Auth State Observer ---
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        // Redirect to user panel if session is active
+        window.location.href = "panel.html";
+      } else {
+        hideLoaderAndRender(renderLogin);
+      }
+    });
+
+    // Start loader on page load
+    loaderStart = Date.now();
+  </script>
+</body>
+</html>
