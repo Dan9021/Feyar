@@ -36,9 +36,32 @@
       margin: 0 auto 1rem auto;
       background: #e0e7ff;
     }
+    /* Pantalla update */
+    #update-screen {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(99,102,241,0.97);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-family: Montserrat,sans-serif;
+    }
   </style>
 </head>
 <body class="flex items-center justify-center min-h-screen">
+
+  <!-- Pantalla Update -->
+  <div id="update-screen">
+    <div class="mb-4 font-bold text-3xl">¡Actualización!</div>
+    <div class="text-lg">Estamos realizando mejoras.<br>Por favor, vuelve más tarde.</div>
+  </div>
+
   <div id="panel-card" class="glass w-full max-w-md p-8 fade-in text-center">
     <img id="user-photo" class="avatar" src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff" alt="Profile photo">
     <h2 class="text-2xl font-bold text-indigo-700 mb-4">User Panel</h2>
@@ -82,6 +105,17 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
   <script>
+    // Cambia esto a true/false para mostrar/ocultar la pantalla update
+    const SHOW_UPDATE_SCREEN = true; // <--- CAMBIA AQUÍ
+
+    if (SHOW_UPDATE_SCREEN) {
+      document.getElementById('update-screen').style.display = "flex";
+      document.getElementById('panel-card').style.display = "none";
+      document.getElementById('settings-card').style.display = "none";
+    } else {
+      document.getElementById('update-screen').style.display = "none";
+    }
+
     // Firebase configuration (same as index.html)
     const firebaseConfig = {
       apiKey: "AIzaSyCmQhp9-DUCbeQtx6R9RBEWA2KcFFs1hKo",
