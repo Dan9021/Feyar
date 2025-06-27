@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>User Panel</title>
+  <title>Global Chat</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
   <style>
@@ -27,222 +27,388 @@
       from { opacity: 0; transform: translateY(30px);}
       to { opacity: 1; transform: translateY(0);}
     }
-    .avatar {
-      width: 80px;
-      height: 80px;
-      object-fit: cover;
-      border-radius: 9999px;
-      border: 3px solid #6366f1;
-      margin: 0 auto 1rem auto;
-      background: #e0e7ff;
+    #messages {
+      height: 350px;
+      overflow-y: auto;
+      background: #f1f5f9;
+      border-radius: 1rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
     }
-    /* Pantalla update */
-    #update-screen {
-      display: none;
-      position: fixed;
-      z-index: 9999;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(99,102,241,0.97);
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      font-family: Montserrat,sans-serif;
+    .msg-user {
+      font-weight: bold;
+      color: #6366f1;
+    }
+    .msg-time {
+      font-size: 0.8em;
+      color: #888;
+      margin-left: 8px;
+    }
+    .delete-btn {
+      color: #dc2626;
+      font-size: 0.8em;
+      margin-top: 4px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+    .delete-btn:hover {
+      text-decoration: underline;
+    }
+    .suggestion-card {
+      background: #fff;
+      border: 2px solid #6366f1;
+      padding: 1rem;
+      margin: 0.5rem 0;
+      box-shadow: 0 2px 8px 0 rgba(99,102,241,0.08);
+      max-width: 100%;
+      width: 100%;
+      border-radius: 1rem;
+    }
+    .suggestion-status {
+      font-size: 0.9em;
+      font-weight: bold;
+      margin-top: 0.5rem;
+    }
+    .suggestion-status.accepted { color: #16a34a; }
+    .suggestion-status.rejected { color: #dc2626; }
+    .suggestion-status.pending { color: #6366f1; }
+    .suggestion-actions button {
+      margin-right: 0.5rem;
+    }
+    /* Botones alineados y del mismo tamaño */
+    #chatForm .chat-btn {
+      min-width: 140px;
+      font-size: 1rem;
+      height: 48px;
+      padding-left: 1.25rem;
+      padding-right: 1.25rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      white-space: nowrap;
     }
   </style>
 </head>
 <body class="flex items-center justify-center min-h-screen">
+  <div class="glass w-full max-w-md p-6 fade-in">
 
-  <!-- Pantalla Update -->
-  <div id="update-screen">
-    <div class="mb-4 font-bold text-3xl">Update!</div>
-    <div class="text-lg">We are working on an update.<br>This site will be opened again soon.</div>
-  </div>
+    <!-- 1. Estadísticas personales -->
+    <div id="user-stats" class="mb-6 bg-indigo-50 rounded-lg p-4 text-left">
+      <div class="font-bold text-indigo-700 mb-2">Tus estadísticas</div>
+      <div id="stat-messages">Mensajes enviados: <span>0</span></div>
+      <div id="stat-suggestions">Sugerencias enviadas: <span>0</span></div>
+      <div id="stat-accepted">Sugerencias aceptadas: <span>0</span></div>
+      <div id="stat-rejected">Sugerencias rechazadas: <span>0</span></div>
+      <div id="stat-lastactive" class="text-xs text-gray-500 mt-2">Última vez activo: <span>-</span></div>
+    </div>
 
-  <div id="panel-card" class="glass w-full max-w-md p-8 fade-in text-center">
-    <img id="user-photo" class="avatar" src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff" alt="Profile photo">
-    <h2 class="text-2xl font-bold text-indigo-700 mb-4">User Panel</h2>
-    <div id="user-info" class="mb-6 text-gray-700"></div>
-    <button id="chatBtn" class="w-full bg-indigo-400 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg transition mb-4">Global Chat</button>
-    <button id="settingsBtn" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 rounded-lg transition mb-4">Settings</button>
-    <button id="logoutBtn" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 rounded-lg transition">Sign Out</button>
-  </div>
+    <!-- 2. Panel de administración (solo admin) -->
+    <div id="admin-panel" style="display:none;" class="mb-6 bg-red-50 rounded-lg p-4 text-left">
+      <div class="font-bold text-red-700 mb-2">Panel de administración</div>
+      <button id="admin-users" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded mb-2">Ver usuarios</button>
+      <button id="admin-suggestions" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded mb-2">Ver sugerencias</button>
+      <button id="admin-announcement" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded">Enviar anuncio global</button>
+    </div>
 
-  <!-- Settings (hidden at start) -->
-  <div id="settings-card" class="glass w-full max-w-md p-8 fade-in text-center" style="display:none;">
-    <h2 class="text-2xl font-bold text-indigo-700 mb-4">Settings</h2>
-    <form id="settingsForm" class="space-y-4">
-      <div>
-        <label class="block text-left text-gray-700 mb-1">Email</label>
-        <input id="settingsEmail" type="email" class="w-full px-4 py-2 border rounded-lg bg-gray-100" disabled>
-      </div>
-      <div>
-        <label class="block text-left text-gray-700 mb-1">Display Name</label>
-        <input id="settingsDisplayName" type="text" class="w-full px-4 py-2 border rounded-lg" placeholder="Your name">
-      </div>
-      <div>
-        <label class="block text-left text-gray-700 mb-1">Profile Photo</label>
-        <input id="settingsPhoto" type="file" accept="image/*" class="w-full px-4 py-2 border rounded-lg bg-white">
-        <img id="previewPhoto" class="avatar mt-2" style="display:none;">
-      </div>
-      <div>
-        <label class="block text-left text-gray-700 mb-1">New Password</label>
-        <input id="settingsPassword" type="password" class="w-full px-4 py-2 border rounded-lg" placeholder="Leave blank to keep current">
-      </div>
-      <div id="settingsMsg" class="text-sm mb-2"></div>
-      <div class="flex gap-2">
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg transition">Save</button>
-        <button type="button" id="backBtn" class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg transition">Back</button>
-      </div>
+    <!-- 3. Personalización -->
+    <div class="mb-6">
+      <button id="themeToggle" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded">Cambiar tema</button>
+      <button id="accentToggle" class="bg-indigo-200 hover:bg-indigo-300 text-indigo-800 px-3 py-1 rounded ml-2">Cambiar color de acento</button>
+    </div>
+
+    <!-- 4. Notificaciones -->
+    <div id="notifications" class="mb-6 hidden bg-yellow-50 rounded-lg p-4 text-left">
+      <div class="font-bold text-yellow-700 mb-2">Notificaciones</div>
+      <ul id="notification-list"></ul>
+    </div>
+
+    <!-- 6. Accesos rápidos -->
+    <div class="mb-6 flex flex-col gap-2">
+      <a href="panel.html" class="w-full bg-indigo-400 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg transition">Volver al Panel</a>
+      <a href="https://github.com/Dan9021/Feyar" target="_blank" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 rounded-lg transition">GitHub del proyecto</a>
+      <a href="faq.html" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 rounded-lg transition">FAQ / Soporte</a>
+    </div>
+
+    <!-- 8. Feedback -->
+    <div class="mb-6 bg-green-50 rounded-lg p-4 text-left">
+      <div class="font-bold text-green-700 mb-2">¿Tienes feedback?</div>
+      <form id="feedbackForm" class="flex flex-col gap-2">
+        <textarea id="feedbackText" class="border rounded p-2" rows="2" placeholder="Escribe tu sugerencia o problema..."></textarea>
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">Enviar feedback</button>
+        <div id="feedbackMsg" class="text-xs text-green-700"></div>
+      </form>
+    </div>
+
+    <h2 class="text-2xl font-bold text-indigo-700 mb-4 text-center">Global Chat</h2>
+    <div id="messages"></div>
+    <form id="chatForm" class="flex w-full gap-2">
+      <input id="msgInput" type="text" class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none transition" placeholder="Type your message..." autocomplete="off" maxlength="300">
+      <button type="submit" class="chat-btn bg-indigo-600 hover:bg-indigo-700 text-white transition">Send</button>
+      <button type="button" id="suggestBtn" class="chat-btn bg-green-600 hover:bg-green-700 text-white transition whitespace-nowrap">Request Suggestion</button>
     </form>
+    <button id="backBtn" class="mt-4 w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg transition">Back to Panel</button>
   </div>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  
   <script>
-    // Cambia esto a true/false para mostrar/ocultar la pantalla update
-    const SHOW_UPDATE_SCREEN = true; // <--- CAMBIA AQUÍ
-
-    if (SHOW_UPDATE_SCREEN) {
-      document.getElementById('update-screen').style.display = "flex";
-      document.getElementById('panel-card').style.display = "none";
-      document.getElementById('settings-card').style.display = "none";
-    } else {
-      document.getElementById('update-screen').style.display = "none";
-    }
-
-    // Firebase configuration (same as index.html)
     const firebaseConfig = {
       apiKey: "AIzaSyCmQhp9-DUCbeQtx6R9RBEWA2KcFFs1hKo",
       authDomain: "inicio-sesion-33406.firebaseapp.com",
       projectId: "inicio-sesion-33406",
       storageBucket: "inicio-sesion-33406.appspot.com",
       messagingSenderId: "998917786779",
-      appId: "1:998917786779:web:92e0f347364e54d6970a3e"
+      appId: "1:998917786779:web:92e0f347364e54d6970a3e",
+      databaseURL: "https://inicio-sesion-33406-default-rtdb.firebaseio.com"
     };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    const storage = firebase.storage();
+    const db = firebase.database();
 
     let currentUser = null;
+    const ADMIN_EMAIL = "daniel.roblox.pr@gmail.com";
 
-    // Show user info and photo
+    // Auth check
     auth.onAuthStateChanged(user => {
-      if (user) {
-        currentUser = user;
-        document.getElementById('user-info').innerHTML = `
-          <div class="mb-2">Hello, <span class="font-semibold">${user.displayName || user.email}</span>!</div>
-          <div class="text-sm text-gray-500">You are signed in.</div>
-        `;
-        document.getElementById('settingsEmail').value = user.email;
-        document.getElementById('settingsDisplayName').value = user.displayName || '';
-        // Profile photo
-        let photoURL = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || user.email)}&background=6366f1&color=fff`;
-        document.getElementById('user-photo').src = photoURL;
-        document.getElementById('previewPhoto').src = photoURL;
-      } else {
+      if (!user) {
         window.location.href = "index.html";
+      } else {
+        currentUser = user;
+        // Cargar estadísticas al iniciar sesión
+        loadUserStats();
+        // Mostrar panel admin si corresponde
+        if (user.email === ADMIN_EMAIL) {
+          document.getElementById('admin-panel').style.display = "block";
+        }
       }
     });
 
-    // Global Chat button
-    document.getElementById('chatBtn').onclick = function() {
-      window.location.href = "chat.html";
-    };
-
-    // Sign out
-    document.getElementById('logoutBtn').onclick = function() {
-      auth.signOut().then(() => {
-        window.location.href = "index.html";
+    // 1. Estadísticas personales
+    function loadUserStats() {
+      let msgCount = 0, sugCount = 0, accCount = 0, rejCount = 0, lastActive = "-";
+      db.ref('chat/messages').orderByChild('email').equalTo(currentUser.email).once('value', snap => {
+        snap.forEach(child => {
+          const msg = child.val();
+          if (msg.type === "suggestion") {
+            sugCount++;
+            if (msg.suggestionStatus === "accepted") accCount++;
+            if (msg.suggestionStatus === "rejected") rejCount++;
+          } else {
+            msgCount++;
+          }
+          if (!lastActive || msg.timestamp > lastActive) lastActive = msg.timestamp;
+        });
+        document.querySelector('#stat-messages span').textContent = msgCount;
+        document.querySelector('#stat-suggestions span').textContent = sugCount;
+        document.querySelector('#stat-accepted span').textContent = accCount;
+        document.querySelector('#stat-rejected span').textContent = rejCount;
+        document.querySelector('#stat-lastactive span').textContent = lastActive !== "-" ? new Date(lastActive).toLocaleString() : "-";
       });
+    }
+
+    // 3. Personalización (tema/acento)
+    document.getElementById('themeToggle').onclick = function() {
+      document.body.classList.toggle('bg-gray-900');
+      document.body.classList.toggle('text-white');
+    };
+    document.getElementById('accentToggle').onclick = function() {
+      document.body.classList.toggle('bg-pink-100');
     };
 
-    // Show settings
-    document.getElementById('settingsBtn').onclick = function() {
-      document.getElementById('panel-card').style.display = "none";
-      document.getElementById('settings-card').style.display = "block";
-      document.getElementById('settingsMsg').textContent = "";
-      // Show current photo preview
-      document.getElementById('previewPhoto').style.display = "block";
+    // 4. Notificaciones
+    function showNotification(msg) {
+      const notif = document.getElementById('notifications');
+      const list = document.getElementById('notification-list');
+      notif.classList.remove('hidden');
+      const li = document.createElement('li');
+      li.textContent = msg;
+      list.appendChild(li);
+      setTimeout(() => { li.remove(); if(!list.children.length) notif.classList.add('hidden'); }, 7000);
+    }
+    // Ejemplo: showNotification("¡Tu sugerencia fue aceptada!");
+
+    // 8. Feedback
+    document.getElementById('feedbackForm').onsubmit = function(e) {
+      e.preventDefault();
+      const text = document.getElementById('feedbackText').value.trim();
+      if (!text) return;
+      db.ref('feedback').push({
+        text,
+        email: currentUser.email,
+        timestamp: Date.now()
+      });
+      document.getElementById('feedbackMsg').textContent = "¡Gracias por tu feedback!";
+      document.getElementById('feedbackText').value = "";
+      setTimeout(()=>{document.getElementById('feedbackMsg').textContent="";}, 4000);
+    };
+
+    // Utilidad para renderizar un mensaje o sugerencia
+    function renderMessage(msg, msgKey) {
+      const avatar = msg.photoURL
+        ? msg.photoURL
+        : `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.displayName || msg.email)}&background=6366f1&color=fff`;
+
+      let content = "";
+
+      if (msg.type === "suggestion") {
+        // Suggestion card
+        let statusText = "";
+        let statusClass = "pending";
+        if (msg.suggestionStatus === "accepted") {
+          statusText = "Accepted";
+          statusClass = "accepted";
+        } else if (msg.suggestionStatus === "rejected") {
+          statusText = "Rejected";
+          statusClass = "rejected";
+        } else {
+          statusText = "Pending";
+        }
+
+        content = `
+          <div class="suggestion-card" data-key="${msgKey}">
+            <div class="flex items-center gap-2 mb-2">
+              <img src="${avatar}" alt="avatar" style="width:32px;height:32px;border-radius:9999px;border:2px solid #6366f1;object-fit:cover;">
+              <span class="msg-user">${msg.displayName || msg.email}</span>
+              <span class="msg-time">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            </div>
+            <div class="mb-2">${msg.text}</div>
+            <div class="suggestion-status ${statusClass}">${statusText}</div>
+            ${
+              currentUser && currentUser.email === ADMIN_EMAIL && msg.suggestionStatus === "pending"
+                ? `<div class="suggestion-actions mt-2">
+                    <button class="accept-btn bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded" data-key="${msgKey}">Accept</button>
+                    <button class="reject-btn bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded" data-key="${msgKey}">Reject</button>
+                  </div>`
+                : ""
+            }
+          </div>
+        `;
+      } else {
+        // Normal message
+        content = `
+          <img src="${avatar}" alt="avatar" style="width:36px;height:36px;border-radius:9999px;border:2px solid #6366f1;object-fit:cover;">
+          <div>
+            <span class="msg-user">${msg.displayName || msg.email}</span>
+            <span class="msg-time">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            <div>${msg.text}</div>
+            ${currentUser && currentUser.email === ADMIN_EMAIL ? `<button data-key="${msgKey}" class="delete-btn">Delete</button>` : ""}
+          </div>
+        `;
+      }
+
+      const div = document.createElement('div');
+      div.className = "mb-2 flex items-start gap-2";
+      div.dataset.key = msgKey;
+      div.innerHTML = content;
+      return div;
+    }
+
+    // Render all messages
+    const messagesDiv = document.getElementById('messages');
+    const messageNodes = {}; // msgKey -> div
+
+    function addOrUpdateMessage(msg, msgKey) {
+      // Remove old node if exists
+      if (messageNodes[msgKey]) {
+        messagesDiv.removeChild(messageNodes[msgKey]);
+        delete messageNodes[msgKey];
+      }
+      // Add new node
+      const div = renderMessage(msg, msgKey);
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      messageNodes[msgKey] = div;
+
+      // Add delete handler if admin
+      if (msg.type !== "suggestion" && currentUser && currentUser.email === ADMIN_EMAIL) {
+        const btn = div.querySelector('.delete-btn');
+        if (btn) {
+          btn.onclick = function() {
+            if (confirm("Are you sure you want to delete this message?")) {
+              db.ref('chat/messages/' + msgKey).remove();
+              if (messageNodes[msgKey]) {
+                messagesDiv.removeChild(messageNodes[msgKey]);
+                delete messageNodes[msgKey];
+              }
+            }
+          };
+        }
+      }
+
+      // Add accept/reject handlers for suggestions
+      if (msg.type === "suggestion" && currentUser && currentUser.email === ADMIN_EMAIL && msg.suggestionStatus === "pending") {
+        const acceptBtn = div.querySelector('.accept-btn');
+        const rejectBtn = div.querySelector('.reject-btn');
+        if (acceptBtn) {
+          acceptBtn.onclick = function() {
+            db.ref('chat/messages/' + msgKey).update({ suggestionStatus: "accepted" });
+          };
+        }
+        if (rejectBtn) {
+          rejectBtn.onclick = function() {
+            db.ref('chat/messages/' + msgKey).update({ suggestionStatus: "rejected" });
+          };
+        }
+      }
+    }
+
+    // Listen for new and changed messages
+    db.ref('chat/messages').limitToLast(50).on('child_added', snap => {
+      addOrUpdateMessage(snap.val(), snap.key);
+    });
+    db.ref('chat/messages').limitToLast(50).on('child_changed', snap => {
+      addOrUpdateMessage(snap.val(), snap.key);
+    });
+    db.ref('chat/messages').limitToLast(50).on('child_removed', snap => {
+      const msgKey = snap.key;
+      if (messageNodes[msgKey]) {
+        messagesDiv.removeChild(messageNodes[msgKey]);
+        delete messageNodes[msgKey];
+      }
+    });
+
+    // Send message
+    document.getElementById('chatForm').onsubmit = function(e) {
+      e.preventDefault();
+      const input = document.getElementById('msgInput');
+      const text = input.value.trim();
+      if (!text) return;
+      db.ref('chat/messages').push({
+        text,
+        email: currentUser.email,
+        displayName: currentUser.displayName || currentUser.email,
+        photoURL: currentUser.photoURL || "",
+        timestamp: Date.now()
+      });
+      input.value = "";
+      loadUserStats();
+    };
+
+    // Request Suggestion
+    document.getElementById('suggestBtn').onclick = function() {
+      const input = document.getElementById('msgInput');
+      const text = input.value.trim();
+      if (!text) return;
+      db.ref('chat/messages').push({
+        text,
+        email: currentUser.email,
+        displayName: currentUser.displayName || currentUser.email,
+        photoURL: currentUser.photoURL || "",
+        timestamp: Date.now(),
+        type: "suggestion",
+        suggestionStatus: "pending"
+      });
+      input.value = "";
+      loadUserStats();
     };
 
     // Back to panel
     document.getElementById('backBtn').onclick = function() {
-      document.getElementById('settings-card').style.display = "none";
-      document.getElementById('panel-card').style.display = "block";
-    };
-
-    // Preview selected photo
-    document.getElementById('settingsPhoto').onchange = function(e) {
-      const file = e.target.files[0];
-      const preview = document.getElementById('previewPhoto');
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-          preview.src = ev.target.result;
-          preview.style.display = "block";
-        };
-        reader.readAsDataURL(file);
-      }
-    };
-
-    // Save settings (name, password, photo)
-    document.getElementById('settingsForm').onsubmit = async function(e) {
-      e.preventDefault();
-      const displayName = document.getElementById('settingsDisplayName').value.trim();
-      const newPassword = document.getElementById('settingsPassword').value;
-      const photoFile = document.getElementById('settingsPhoto').files[0];
-      const msg = document.getElementById('settingsMsg');
-      msg.textContent = "Saving...";
-      msg.className = "text-sm mb-2 text-gray-600";
-
-      let photoURL = currentUser.photoURL;
-
-      // Upload photo if present
-      if (photoFile) {
-        try {
-          const storageRef = storage.ref(`profile_photos/${currentUser.uid}`);
-          await storageRef.put(photoFile);
-          photoURL = await storageRef.getDownloadURL();
-        } catch (error) {
-          msg.textContent = "Error uploading photo: " + error.message;
-          msg.className = "text-sm mb-2 text-red-600";
-          return;
-        }
-      }
-
-      // Update name and photo
-      try {
-        await currentUser.updateProfile({ displayName, photoURL });
-        // Update password if present
-        if (newPassword) {
-          if (newPassword.length < 6) {
-            msg.textContent = "Password must be at least 6 characters.";
-            msg.className = "text-sm mb-2 text-red-600";
-            return;
-          }
-          await currentUser.updatePassword(newPassword);
-        }
-        msg.textContent = "Changes saved!";
-        msg.className = "text-sm mb-2 text-green-600";
-        document.getElementById('settingsPassword').value = "";
-        document.getElementById('user-info').innerHTML = `
-          <div class="mb-2">Hello, <span class="font-semibold">${displayName || currentUser.email}</span>!</div>
-          <div class="text-sm text-gray-500">You are signed in.</div>
-        `;
-        // Update photo in panel
-        let finalPhoto = photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || currentUser.email)}&background=6366f1&color=fff`;
-        document.getElementById('user-photo').src = finalPhoto;
-        document.getElementById('previewPhoto').src = finalPhoto;
-      } catch (error) {
-        msg.textContent = "Error: " + error.message;
-        msg.className = "text-sm mb-2 text-red-600";
-      }
+      window.location.href = "panel.html";
     };
   </script>
 </body>
